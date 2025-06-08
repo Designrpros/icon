@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import styled, { css } from 'styled-components';
-import Link from 'next/link';
+import styled from 'styled-components';
 import type { Event } from '@/lib/types';
 import EventCard from '@/components/EventCard'; // Make sure to import your reusable card
 
@@ -214,7 +213,7 @@ export default function EventsPage() {
       </EventsGrid>
 
       {showLoadingMessage && <LoadingText>{loadingStatus}</LoadingText>}
-      {showNoResultsMessage && <LoadingText>No events found for "{searchTerm}".</LoadingText>}
+      {showNoResultsMessage && <LoadingText>No events found for &quot;{searchTerm}&quot;.</LoadingText>}
     </Wrapper>
   );
 }

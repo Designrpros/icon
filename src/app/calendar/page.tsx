@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import styled from 'styled-components';
-import Link from 'next/link';
 import type { Event } from '@/lib/types';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
@@ -139,7 +138,6 @@ const LoadingText = styled.p`
   grid-column: 1 / -1;
   margin-top: 2rem;
 `;
-
 
 // --- DATE PARSING HELPER (unchanged) ---
 const norwegianMonths: { [key: string]: number } = { 'jan': 0, 'feb': 1, 'mar': 2, 'apr': 3, 'mai': 4, 'jun': 5, 'jul': 6, 'aug': 7, 'sep': 8, 'okt': 9, 'nov': 10, 'des': 11 };

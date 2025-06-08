@@ -11,7 +11,7 @@ async function revealAllEvents(page: Page) {
   try {
     await page.waitForSelector(`${eventListSelector}:first-child`, { state: 'visible', timeout: 20000 });
     console.log('Rockefeller: First event is visible. Starting gentle, human-like scroll...');
-  } catch (error) {
+  } catch {
     console.error("Rockefeller: Fatal: The first event item did not appear.");
     await page.screenshot({ path: path.join(process.cwd(), 'debug-rockefeller-fail.png') });
     return;
@@ -44,7 +44,7 @@ async function ensureAllImagesAreLoaded(page: Page) {
         try {
             await eventLocators[i].scrollIntoViewIfNeeded({ timeout: 1000 });
             await page.waitForTimeout(25); 
-        } catch (e) {
+        } catch {
             console.log(`Rockefeller: Could not scroll to event ${i + 1}, but continuing scan.`);
         }
     }

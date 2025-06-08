@@ -1,4 +1,4 @@
-import { chromium, devices, Page } from 'playwright';
+import { chromium, devices } from 'playwright';
 import type { Event } from '@/lib/types';
 
 // The function now accepts a callback to stream data out
@@ -17,7 +17,7 @@ export async function scrapeBilletto(
     try {
       await page.click('button:has-text("Accept all")', { timeout: 5000 });
       console.log('Billetto: Cookie banner accepted.');
-    } catch(e) {
+    } catch {
       console.log('Billetto: No cookie banner found.');
     }
 

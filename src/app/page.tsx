@@ -169,7 +169,7 @@ const Footer = styled.footer`
 export default function Home() {
   const fullTitle = 'ICON: YOUR GUIDE TO LIVE EVENTS'; // <-- Updated Title
   const [displayedText, setDisplayedText] = useState('');
-  const [isTyping, setIsTyping] = useState(true);
+  // const [isTyping, setIsTyping] = useState(true); // Removed as it's not used
 
   useEffect(() => {
     let index = 0;
@@ -181,7 +181,7 @@ export default function Home() {
         index++;
         setTimeout(type, typingSpeed);
       } else {
-        setIsTyping(false);
+        // setIsTyping(false); // Removed as isTyping is no longer needed
       }
     };
 
@@ -189,7 +189,7 @@ export default function Home() {
 
     return () => {
       setDisplayedText('');
-      setIsTyping(true);
+      // setIsTyping(true); // Removed as isTyping is no longer needed
     };
   }, []);
 
@@ -203,9 +203,9 @@ export default function Home() {
           </TypewriterText>
         </HeroTitle>
         <HeroSubtitle className="font-sans">
-          Tired of missing out? We scan every venue, promoter, and festival so you don't have to. 
+          Tired of missing out? We scan every venue, promoter, and festival so you don&apos;t have to. 
           {' '}
-          <HighlightedText>All events. One guide. Zero noise.</HighlightedText> {/* <-- Updated Highlight */}
+          <HighlightedText>All events. One guide. Zero noise.</HighlightedText>
         </HeroSubtitle>
         <Link href="/events">
           <CTAButton>Find Events Now</CTAButton>
@@ -216,7 +216,6 @@ export default function Home() {
       <InfoSection id="about">
         <SectionTitle>Your City, <span>Curated.</span></SectionTitle>
         <SectionText>
-          {/* ↓ Updated Text Here ↓ */}
           Icon is a smart event aggregator for cities across Norway and beyond. We automatically collect and organize thousands of event listings from hundreds of sources—from major arenas to local pubs—and present them in one clean, simple, and searchable feed. Stop hunting, start discovering.
         </SectionText>
 
@@ -252,7 +251,7 @@ export default function Home() {
           © {new Date().getFullYear()} Icon. All rights reserved.
         </p>
         <p className="font-sans">
-          Your guide to what's happening in Oslo and beyond.
+          Your guide to what&apos;s happening in Oslo and beyond.
         </p>
       </Footer>
     </Wrapper>
