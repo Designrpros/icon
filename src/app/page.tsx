@@ -1,103 +1,260 @@
-import Image from "next/image";
+'use client';
 
+import { useState, useEffect } from 'react';
+import styled from 'styled-components';
+import Link from 'next/link';
+
+// --- STYLED COMPONENTS (No changes needed) ---
+const Wrapper = styled.div`
+  min-height: 100vh;
+  background-color: #1A1A3D; /* Deep indigo background */
+  background-image: radial-gradient(ellipse at 50% -50%, rgba(255, 140, 66, 0.15), transparent 70%);
+  background-repeat: no-repeat;
+`;
+
+const HeroSection = styled.section`
+  padding: 10rem 2rem 4rem 2rem; /* Adjusted padding from when Navbar was added */
+  text-align: left;
+  max-width: 1200px;
+  margin: 0 auto;
+`;
+
+const HeroTitle = styled.h1`
+  font-size: 4rem;
+  font-weight: 800;
+  line-height: 1.2;
+  margin-bottom: 1rem;
+  color: #FFFFFF;
+  display: block;
+  @media (max-width: 1024px) {
+    font-size: 3rem;
+  }
+  @media (max-width: 768px) {
+    font-size: 2.5rem;
+  }
+  @media (max-width: 480px) {
+    font-size: 2rem;
+  }
+`;
+
+const TypewriterText = styled.span`
+  display: inline-block;
+  border-right: 3px solid #FF8C42; /* Orange accent cursor */
+  @media (max-width: 768px) {
+    border-right: 2px solid #FF8C42;
+  }
+  @media (max-width: 480px) {
+    border-right: 1px solid #FF8C42;
+  }
+`;
+
+const HighlightedText = styled.span`
+  background-color: #FF8C42; /* Orange accent highlight */
+  color: #1A1A3D;
+  font-weight: 600;
+  padding: 0 0.25rem;
+`;
+
+const HeroSubtitle = styled.p`
+  font-size: 1.125rem;
+  margin-bottom: 1.5rem;
+  color: #A9A7C7; /* Muted lavender for secondary text */
+  max-width: 600px;
+  @media (max-width: 768px) {
+    font-size: 1rem;
+  }
+`;
+
+const CTAButton = styled.button`
+  background-color: #FF8C42; /* Orange accent button */
+  color: #1A1A3D; /* Dark text on button */
+  font-weight: 700;
+  padding: 0.75rem 2rem;
+  border-radius: 9999px;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s ease-in-out, background-color 0.2s;
+  &:hover {
+    transform: scale(1.05);
+    background-color: #ffb17a;
+  }
+  @media (max-width: 768px) {
+    padding: 0.5rem 1.5rem;
+    font-size: 0.875rem;
+  }
+`;
+
+const InfoSection = styled.section`
+  padding: 4rem 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  text-align: center;
+  border-top: 1px solid #4F4C7A;
+
+  @media (max-width: 768px) {
+    padding: 3rem 1rem;
+  }
+`;
+
+const SectionTitle = styled.h2`
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #FFFFFF;
+  margin-bottom: 1rem;
+  span {
+    color: #FF8C42;
+  }
+  @media (max-width: 768px) {
+    font-size: 2rem;
+  }
+`;
+
+const SectionText = styled.p`
+  font-size: 1.125rem;
+  color: #A9A7C7;
+  max-width: 800px;
+  margin: 0 auto 3rem auto;
+  line-height: 1.6;
+  @media (max-width: 768px) {
+    font-size: 1rem;
+  }
+`;
+
+const HowItWorksGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2rem;
+  margin-top: 3rem;
+`;
+
+const StepCard = styled.div`
+  background-color: #2C2A4A;
+  padding: 2rem;
+  border-radius: 0.5rem;
+  text-align: left;
+`;
+
+const StepNumber = styled.div`
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #FF8C42;
+  margin-bottom: 1rem;
+`;
+
+const StepTitle = styled.h3`
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #FFFFFF;
+  margin-bottom: 0.5rem;
+`;
+
+const StepDescription = styled.p`
+  font-size: 1rem;
+  color: #A9A7C7;
+  line-height: 1.5;
+`;
+
+const Footer = styled.footer`
+  color: #A9A7C7;
+  text-align: center;
+  padding: 2rem;
+  margin-top: 2rem;
+  border-top: 1px solid #4F4C7A;
+  @media (max-width: 768px) {
+    padding: 1rem;
+  }
+`;
+
+// --- HOME PAGE COMPONENT (with updated text) ---
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const fullTitle = 'ICON: YOUR GUIDE TO LIVE EVENTS'; // <-- Updated Title
+  const [displayedText, setDisplayedText] = useState('');
+  const [isTyping, setIsTyping] = useState(true);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+  useEffect(() => {
+    let index = 0;
+    const typingSpeed = 100;
+
+    const type = () => {
+      if (index < fullTitle.length) {
+        setDisplayedText(fullTitle.substring(0, index + 1));
+        index++;
+        setTimeout(type, typingSpeed);
+      } else {
+        setIsTyping(false);
+      }
+    };
+
+    type();
+
+    return () => {
+      setDisplayedText('');
+      setIsTyping(true);
+    };
+  }, []);
+
+  return (
+    <Wrapper>
+      {/* Hero Section */}
+      <HeroSection>
+        <HeroTitle className="font-heading">
+          <TypewriterText className="typewriter">
+            {displayedText}
+          </TypewriterText>
+        </HeroTitle>
+        <HeroSubtitle className="font-sans">
+          Tired of missing out? We scan every venue, promoter, and festival so you don't have to. 
+          {' '}
+          <HighlightedText>All events. One guide. Zero noise.</HighlightedText> {/* <-- Updated Highlight */}
+        </HeroSubtitle>
+        <Link href="/events">
+          <CTAButton>Find Events Now</CTAButton>
+        </Link>
+      </HeroSection>
+
+      {/* Info Section */}
+      <InfoSection id="about">
+        <SectionTitle>Your City, <span>Curated.</span></SectionTitle>
+        <SectionText>
+          {/* ↓ Updated Text Here ↓ */}
+          Icon is a smart event aggregator for cities across Norway and beyond. We automatically collect and organize thousands of event listings from hundreds of sources—from major arenas to local pubs—and present them in one clean, simple, and searchable feed. Stop hunting, start discovering.
+        </SectionText>
+
+        <SectionTitle>How It <span>Works.</span></SectionTitle>
+        <HowItWorksGrid>
+          <StepCard>
+            <StepNumber>01</StepNumber>
+            <StepTitle>We Scan</StepTitle>
+            <StepDescription>
+              Our automated scrapers work around the clock, visiting hundreds of websites, social media pages, and ticketing platforms to find every event happening in your city.
+            </StepDescription>
+          </StepCard>
+          <StepCard>
+            <StepNumber>02</StepNumber>
+            <StepTitle>We Organize</StepTitle>
+            <StepDescription>
+              Our system cleans, categorizes, and removes duplicate listings. We enrich the data, so you get clear, consistent information every time.
+            </StepDescription>
+          </StepCard>
+          <StepCard>
+            <StepNumber>03</StepNumber>
+            <StepTitle>You Discover</StepTitle>
+            <StepDescription>
+              You get one beautiful, fast, and complete guide to everything happening. Search by date, category, or venue and find your next great experience in seconds.
+            </StepDescription>
+          </StepCard>
+        </HowItWorksGrid>
+      </InfoSection>
+
+      {/* Footer */}
+      <Footer>
+        <p className="font-sans">
+          © {new Date().getFullYear()} Icon. All rights reserved.
+        </p>
+        <p className="font-sans">
+          Your guide to what's happening in Oslo and beyond.
+        </p>
+      </Footer>
+    </Wrapper>
   );
 }
