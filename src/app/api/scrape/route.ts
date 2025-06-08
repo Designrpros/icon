@@ -1,6 +1,11 @@
 import { getScrapedEvents } from '@/lib/scraper-cache';
 import type { Event } from '@/lib/types';
 
+// Set the maximum duration for this serverless function
+// Vercel Hobby (free) plan default is 10s, max is 60s.
+// If on a Pro/Enterprise plan, you can set it higher (e.g., 300 for 5 minutes).
+export const maxDuration = 60; // Increase to 60 seconds
+
 export const dynamic = 'force-dynamic'; // Ensure this route is always run dynamically
 
 export async function GET() {
@@ -9,6 +14,7 @@ export async function GET() {
     async start(controller) {
       const onData = (events: Event[]) => {
         const chunk = JSON.stringify(events);
+        // Ensure each data chunk is correctly formatted for SSE
         controller.enqueue(encoder.encode(`data: ${chunk}\n\n`));
       };
       
@@ -24,8 +30,8 @@ export async function GET() {
   return new Response(stream, {
     headers: {
       'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
+      'Cache-Control': 'no-cache', // Important for SSE to prevent caching issues
+      'Connection': 'keep-alive', // Important for SSE
     },
   });
 }
