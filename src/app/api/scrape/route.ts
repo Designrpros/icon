@@ -1,37 +1,57 @@
-import { getScrapedEvents } from '@/lib/scraper-cache';
-import type { Event } from '@/lib/types';
+// app/api/scrape/route.ts for Vercel deployment (Frontend)
+'use server'; // Ensures this runs on the server
 
-// Set the maximum duration for this serverless function
-// Vercel Hobby (free) plan default is 10s, max is 60s.
-// If on a Pro/Enterprise plan, you can set it higher (e.g., 300 for 5 minutes).
-export const maxDuration = 60; // Increase to 60 seconds
+// Assuming types.ts is still in your frontend lib/types.ts
+import type { Event } from '@/lib/types'; 
 
-export const dynamic = 'force-dynamic'; // Ensure this route is always run dynamically
+// IMPORTANT: This URL MUST point to your self-hosted backend API.
+// It will use the BACKEND_API_URL environment variable you set in Vercel and .env.local.
+// If the env var isn't set, it falls back to your specific public IP and port.
+const BACKEND_API_URL = process.env.BACKEND_API_URL || 'http://51.175.105.40:3001'; 
 
 export async function GET() {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
-      const onData = (events: Event[]) => {
-        const chunk = JSON.stringify(events);
-        // Ensure each data chunk is correctly formatted for SSE
-        controller.enqueue(encoder.encode(`data: ${chunk}\n\n`));
-      };
-      
-      // Call our cache manager. It handles all the logic about
-      // whether to return cached data or start a new scrape.
-      await getScrapedEvents(onData);
+      try {
+        console.log(`[${new Date().toISOString()}] Frontend: Fetching events from backend API: ${BACKEND_API_URL}/api/events`);
+        const response = await fetch(`${BACKEND_API_URL}/api/events`, {
+          // Add headers if your backend API requires authentication (highly recommended for security!)
+          // headers: { 'Authorization': `Bearer ${process.env.BACKEND_API_KEY}` } // Example
+          next: { revalidate: 3600 } // Next.js cache revalidation every hour (optional, but good for performance)
+        });
 
-      // Once the manager is done (either by sending cache or finishing a scrape), close the stream.
-      controller.close();
+        if (!response.ok) {
+          throw new Error(`Backend API responded with status ${response.status}: ${response.statusText}`);
+        }
+
+        const events: Event[] = await response.json();
+        console.log(`[${new Date().toISOString()}] Frontend: Received ${events.length} events from backend.`);
+        const chunk = JSON.stringify(events);
+        controller.enqueue(encoder.encode(`data: ${chunk}\n\n`));
+
+      } catch (error) {
+        console.error(`[${new Date().toISOString()}] Frontend: Error fetching events from backend API:`, error);
+        // In case of error, send an empty array or an error message to the client
+        controller.enqueue(encoder.encode(`data: []\n\n`));
+      } finally {
+        controller.close(); // Always close the stream
+      }
     },
   });
 
   return new Response(stream, {
     headers: {
       'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache', // Important for SSE to prevent caching issues
-      'Connection': 'keep-alive', // Important for SSE
+      'Cache-Control': 'no-cache', // Important for Server-Sent Events (SSE)
+      'Connection': 'keep-alive',
     },
   });
 }
+
+// 'force-dynamic' ensures this route is always run on demand and fetches fresh data
+export const dynamic = 'force-dynamic';
+
+// The maxDuration is no longer needed here as the heavy work is offloaded to your Ubuntu server.
+// Vercel function will just make a quick HTTP request.
+// export const maxDuration = 60; // You can remove this line
