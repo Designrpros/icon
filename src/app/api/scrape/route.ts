@@ -1,6 +1,4 @@
 // app/api/scrape/route.ts (for your Vercel frontend deployment)
-'use server'; // Keep this line if it's already there (it was removed in an earlier step as per fix)
-              // If you removed it previously, keep it removed. The build logs will tell us if it causes issues.
 
 import type { Event } from '@/lib/types'; 
 
