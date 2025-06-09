@@ -182,7 +182,6 @@ function parseCustomDate(dateString: string | null): Date | null {
 export default function CalendarPage() {
   const [allEvents, setAllEvents] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  // Default to today's date so the page loads with events
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
 
   const eventDates = useMemo(() => {
@@ -218,11 +217,7 @@ export default function CalendarPage() {
       .map(event => ({ ...event, parsedDate: parseCustomDate(event.date) }))
       .filter(event => {
         if (!event.parsedDate) return false;
-        
-        // If no date is selected, show nothing
         if (!selectedDate) return false; 
-        
-        // Otherwise, only show events for the selected date
         return event.parsedDate.toDateString() === selectedDate.toDateString();
       })
       .sort((a, b) => {
@@ -231,13 +226,12 @@ export default function CalendarPage() {
       });
   }, [allEvents, selectedDate]);
   
-  const handleDateChange = (date: any) => {
-    const newDate = date as Date;
-    if (selectedDate && newDate.toDateString() === selectedDate.toDateString()) {
-      // Clicking the active date deselects it
+  // --- FIX IS HERE: Changed 'any' to 'Date' ---
+  const handleDateChange = (date: Date) => {
+    if (selectedDate && date.toDateString() === selectedDate.toDateString()) {
       setSelectedDate(null);
     } else {
-      setSelectedDate(newDate);
+      setSelectedDate(date);
     }
   }
 
@@ -260,16 +254,16 @@ export default function CalendarPage() {
         />
       </CalendarWrapper>
 
-      {/* This button will now clear the selection, hiding all events */}
-      <FilterControls>
-        <ClearButton onClick={() => setSelectedDate(null)}>Clear Selection</ClearButton>
-      </FilterControls>
+      {selectedDate && (
+        <FilterControls>
+          <ClearButton onClick={() => setSelectedDate(null)}>Clear Selection</ClearButton>
+        </FilterControls>
+      )}
 
       {isLoading && filteredEvents.length === 0 && <LoadingText>Loading Events...</LoadingText>}
 
       <EventsGrid>
         {filteredEvents.map(event => (
-            // Pass the event object directly; it now includes the parsedDate
             <EventCard key={event.id} event={event} />
         ))}
       </EventsGrid>
@@ -278,7 +272,7 @@ export default function CalendarPage() {
         <LoadingText>
           {selectedDate 
             ? `No events found for ${selectedDate.toLocaleDateString('nb-NO')}.`
-            : 'Select a date to see events.' // Updated message
+            : 'Select a date to see events.'
           }
         </LoadingText>
       )}
