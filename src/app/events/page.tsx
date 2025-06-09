@@ -1,12 +1,13 @@
+// src/app/events/page.tsx
+
 'use client';
 
-// Fix 1: Add useMemo to the React import
-import { useState, useEffect, useMemo } from 'react'; 
+import { useState, useEffect, useMemo } from 'react';
 import styled from 'styled-components';
 import type { Event } from '@/lib/types';
 import EventCard from '@/components/EventCard';
 
-// --- STYLED COMPONENTS (No changes needed here) ---
+// --- STYLED COMPONENTS (No changes) ---
 const Wrapper = styled.div`
   min-height: 100vh;
   background-color: #1A1A3D;
@@ -92,27 +93,42 @@ const LoadingText = styled.p`
   margin-top: 2rem;
 `;
 
-// --- DATE PARSING HELPER (unchanged) ---
+// --- DATE PARSING HELPER ---
 const norwegianMonths: { [key: string]: number } = {
-  'jan': 0, 'feb': 1, 'mar': 2, 'apr': 3, 'mai': 4, 'jun': 5,
-  'jul': 6, 'aug': 7, 'sep': 8, 'okt': 9, 'nov': 10, 'des': 11,
+    'jan': 0, 'feb': 1, 'mar': 2, 'apr': 3, 'mai': 4, 'jun': 5, 'jul': 6, 'aug': 7, 'sep': 8, 'okt': 9, 'nov': 10, 'des': 11,
+    'januar': 0, 'februar': 1, 'mars': 2, 'april': 3, 'juni': 5, 'juli': 6, 'august': 7, 'september': 8, 'oktober': 9, 'november': 10, 'desember': 11
 };
 
 function parseCustomDate(dateString: string | null): Date | null {
-  if (!dateString) return null;
-  const parts = dateString.toLowerCase().split(' ');
-  if (parts.length < 3) return null;
-  const day = parseInt(parts[1], 10);
-  const monthIndex = norwegianMonths[parts[2].replace('.', '')];
-  if (isNaN(day) || monthIndex === undefined) return null;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0); 
-  let eventYear = today.getFullYear();
-  const preliminaryEventDate = new Date(eventYear, monthIndex, day);
-  if (preliminaryEventDate < today) {
-    eventYear++;
-  }
-  return new Date(eventYear, monthIndex, day);
+    if (!dateString) return null;
+    const cleanDateString = dateString.toLowerCase().trim();
+
+    const ymdParts = cleanDateString.split('.');
+    if (ymdParts.length === 3 && ymdParts[0].length === 2 && ymdParts[1].length === 2 && ymdParts[2].length === 4) {
+        const day = parseInt(ymdParts[0], 10);
+        const monthIndex = parseInt(ymdParts[1], 10) - 1;
+        const year = parseInt(ymdParts[2], 10);
+        if (!isNaN(day) && !isNaN(monthIndex) && !isNaN(year)) {
+            return new Date(year, monthIndex, day);
+        }
+    }
+    
+    const parts = cleanDateString.replace('.', '').split(' ');
+    const potentialDay = parseInt(parts[0], 10) || parseInt(parts[1], 10);
+    const potentialMonth = parts.find(p => norwegianMonths[p] !== undefined);
+
+    if (!isNaN(potentialDay) && potentialMonth) {
+        const day = potentialDay;
+        const monthIndex = norwegianMonths[potentialMonth];
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        let eventYear = today.getFullYear();
+        const preliminaryEventDate = new Date(eventYear, monthIndex, day);
+        if (preliminaryEventDate < today) { eventYear++; }
+        return new Date(eventYear, monthIndex, day);
+    }
+    
+    return null;
 }
 
 // --- EVENTS PAGE COMPONENT ---
@@ -140,30 +156,42 @@ export default function EventsPage() {
   }, []);
 
   const sources = ['All', ...Array.from(new Set(allEvents.map(event => event.source)))];
-  const lowerCaseSearchTerm = searchTerm.toLowerCase();
   
   const processedEvents = useMemo(() => {
+    const lowerCaseSearchTerm = searchTerm.toLowerCase();
+
+    // The .map() function here adds the `parsedDate` property to each event
     return allEvents
-      .filter(event => { 
+      .map(event => ({
+        ...event,
+        parsedDate: parseCustomDate(event.date),
+      }))
+      .filter(event => {
+        // Now we can filter based on the new properties
+        if (!event.parsedDate) return false;
+
         const matchesSource = activeSource === 'All' || event.source === activeSource;
         if (!matchesSource) return false;
-        if (!lowerCaseSearchTerm) return true;
-        const searchableContent = [ event.title, event.venue, event.date, event.description, event.ticketStatus, event.source, event.city, ]
-          .filter(Boolean).join(' ').toLowerCase();
-        return searchableContent.includes(lowerCaseSearchTerm);
+
+        if (lowerCaseSearchTerm) {
+          const searchableContent = [
+            event.title, event.venue, event.date, event.description,
+            event.ticketStatus, event.source, event.city
+          ].filter(Boolean).join(' ').toLowerCase();
+          return searchableContent.includes(lowerCaseSearchTerm);
+        }
+        
+        return true;
       })
-      // Fix 2: Add explicit type to 'event' parameter
-      .sort((a, b) => { 
-        const dateA = parseCustomDate(a.date);
-        const dateB = parseCustomDate(b.date);
-        if (!dateA) return 1;
-        if (!dateB) return -1;
-        return dateA.getTime() - dateB.getTime();
+      .sort((a, b) => {
+        // We can now safely sort by the `parsedDate` property
+        if (!a.parsedDate || !b.parsedDate) return 0;
+        return a.parsedDate.getTime() - b.parsedDate.getTime();
       });
-  }, [allEvents, activeSource, lowerCaseSearchTerm]);
+  }, [allEvents, activeSource, searchTerm]);
 
   const showLoadingMessage = isLoading && allEvents.length === 0;
-  const showNoResultsMessage = !isLoading && processedEvents.length === 0 && searchTerm !== '';
+  const showNoResultsMessage = !isLoading && processedEvents.length === 0;
 
   return (
     <Wrapper>
@@ -191,14 +219,14 @@ export default function EventsPage() {
       </EventsHeader>
 
       <EventsGrid>
-        {/* Fix 2: Add explicit type to 'event' parameter here too */}
-        {processedEvents.map((event: Event) => (
+        {processedEvents.map((event) => (
+          // The 'event' object passed here now has the required 'parsedDate'
           <EventCard key={event.id} event={event} />
         ))}
       </EventsGrid>
 
       {showLoadingMessage && <LoadingText>Loading event data...</LoadingText>}
-      {showNoResultsMessage && <LoadingText>No events found for &quot;{searchTerm}&quot;.</LoadingText>}
+      {showNoResultsMessage && <LoadingText>No events found for your search or filter.</LoadingText>}
     </Wrapper>
   );
 }

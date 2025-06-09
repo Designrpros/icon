@@ -1,3 +1,5 @@
+// src/app/calendar/page.tsx
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -7,7 +9,7 @@ import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import EventCard from '@/components/EventCard';
 
-// --- STYLED COMPONENTS (No changes needed here) ---
+// --- STYLED COMPONENTS (No changes) ---
 const Wrapper = styled.div`
   min-height: 100vh;
   padding-top: 8rem;
@@ -40,7 +42,6 @@ const CalendarWrapper = styled.div`
   border-radius: 0.5rem;
   border: 1px solid #4F4C7A;
 
-  /* Custom styles to theme the calendar */
   .react-calendar {
     width: 100%;
     border: none;
@@ -94,11 +95,9 @@ const CalendarWrapper = styled.div`
     background: none;
     color: #4F4C7A;
   }
-
-  /* --- NEWLY ADDED STYLE FOR NAVIGATION BUTTONS --- */
   .react-calendar__navigation button:disabled {
     background: none;
-    color: #4F4C7A; /* Use the same muted color */
+    color: #4F4C7A;
   }
 `;
 
@@ -139,29 +138,51 @@ const LoadingText = styled.p`
   margin-top: 2rem;
 `;
 
-// --- DATE PARSING HELPER (unchanged) ---
-const norwegianMonths: { [key: string]: number } = { 'jan': 0, 'feb': 1, 'mar': 2, 'apr': 3, 'mai': 4, 'jun': 5, 'jul': 6, 'aug': 7, 'sep': 8, 'okt': 9, 'nov': 10, 'des': 11 };
+// --- The multi-format date parser ---
+const norwegianMonths: { [key: string]: number } = {
+    'jan': 0, 'feb': 1, 'mar': 2, 'apr': 3, 'mai': 4, 'jun': 5, 'jul': 6, 'aug': 7, 'sep': 8, 'okt': 9, 'nov': 10, 'des': 11,
+    'januar': 0, 'februar': 1, 'mars': 2, 'april': 3, 'juni': 5, 'juli': 6, 'august': 7, 'september': 8, 'oktober': 9, 'november': 10, 'desember': 11
+};
+
 function parseCustomDate(dateString: string | null): Date | null {
     if (!dateString) return null;
-    const parts = dateString.toLowerCase().split(' ');
-    if (parts.length < 3) return null;
-    const day = parseInt(parts[1], 10);
-    const monthIndex = norwegianMonths[parts[2].replace('.', '')];
-    if (isNaN(day) || monthIndex === undefined) return null;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); 
-    let eventYear = today.getFullYear();
-    const preliminaryEventDate = new Date(eventYear, monthIndex, day);
-    if (preliminaryEventDate < today) {
-        eventYear++;
+    const cleanDateString = dateString.toLowerCase().trim();
+
+    const ymdParts = cleanDateString.split('.');
+    if (ymdParts.length === 3 && ymdParts[0].length === 2 && ymdParts[1].length === 2 && ymdParts[2].length === 4) {
+        const day = parseInt(ymdParts[0], 10);
+        const monthIndex = parseInt(ymdParts[1], 10) - 1;
+        const year = parseInt(ymdParts[2], 10);
+        if (!isNaN(day) && !isNaN(monthIndex) && !isNaN(year)) {
+            return new Date(year, monthIndex, day);
+        }
     }
-    return new Date(eventYear, monthIndex, day);
+
+    const parts = cleanDateString.replace('.', '').split(' ');
+    const potentialDay = parseInt(parts[0], 10) || parseInt(parts[1], 10);
+    const potentialMonth = parts.find(p => norwegianMonths[p] !== undefined);
+
+    if (!isNaN(potentialDay) && potentialMonth) {
+        const day = potentialDay;
+        const monthIndex = norwegianMonths[potentialMonth];
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        let eventYear = today.getFullYear();
+        const preliminaryEventDate = new Date(eventYear, monthIndex, day);
+        if (preliminaryEventDate < today) {
+            eventYear++;
+        }
+        return new Date(eventYear, monthIndex, day);
+    }
+    
+    return null;
 }
 
 // --- CALENDAR PAGE COMPONENT ---
 export default function CalendarPage() {
   const [allEvents, setAllEvents] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  // Default to today's date so the page loads with events
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
 
   const eventDates = useMemo(() => {
@@ -175,7 +196,6 @@ export default function CalendarPage() {
     return dates;
   }, [allEvents]);
 
-  // --- UPDATED useEffect for simple JSON fetch ---
   useEffect(() => {
     const fetchEvents = async () => {
       setIsLoading(true);
@@ -191,20 +211,19 @@ export default function CalendarPage() {
       }
     };
     fetchEvents();
-  }, []); // Empty dependency array means this runs once on mount
+  }, []);
 
   const filteredEvents = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
     return allEvents
       .map(event => ({ ...event, parsedDate: parseCustomDate(event.date) }))
       .filter(event => {
         if (!event.parsedDate) return false;
         
-        if (!selectedDate) return event.parsedDate >= today; // Show all future events
-
-        return event.parsedDate.toDateString() === selectedDate.toDateString(); // Show events for specific selected date
+        // If no date is selected, show nothing
+        if (!selectedDate) return false; 
+        
+        // Otherwise, only show events for the selected date
+        return event.parsedDate.toDateString() === selectedDate.toDateString();
       })
       .sort((a, b) => {
         if (!a.parsedDate || !b.parsedDate) return 0;
@@ -212,11 +231,13 @@ export default function CalendarPage() {
       });
   }, [allEvents, selectedDate]);
   
-  const handleDateChange = (date: Date) => {
-    if (selectedDate && date.toDateString() === selectedDate.toDateString()) {
-      setSelectedDate(null); // Clicking the same date again clears the filter
+  const handleDateChange = (date: any) => {
+    const newDate = date as Date;
+    if (selectedDate && newDate.toDateString() === selectedDate.toDateString()) {
+      // Clicking the active date deselects it
+      setSelectedDate(null);
     } else {
-      setSelectedDate(date);
+      setSelectedDate(newDate);
     }
   }
 
@@ -239,16 +260,16 @@ export default function CalendarPage() {
         />
       </CalendarWrapper>
 
-      {selectedDate && (
-        <FilterControls>
-          <ClearButton onClick={() => setSelectedDate(null)}>Show All Upcoming Events</ClearButton>
-        </FilterControls>
-      )}
+      {/* This button will now clear the selection, hiding all events */}
+      <FilterControls>
+        <ClearButton onClick={() => setSelectedDate(null)}>Clear Selection</ClearButton>
+      </FilterControls>
 
       {isLoading && filteredEvents.length === 0 && <LoadingText>Loading Events...</LoadingText>}
 
       <EventsGrid>
         {filteredEvents.map(event => (
+            // Pass the event object directly; it now includes the parsedDate
             <EventCard key={event.id} event={event} />
         ))}
       </EventsGrid>
@@ -256,8 +277,8 @@ export default function CalendarPage() {
       {!isLoading && filteredEvents.length === 0 && (
         <LoadingText>
           {selectedDate 
-            ? `No events found for ${selectedDate.toLocaleDateString('en-GB')}.`
-            : 'No upcoming events found.'
+            ? `No events found for ${selectedDate.toLocaleDateString('nb-NO')}.`
+            : 'Select a date to see events.' // Updated message
           }
         </LoadingText>
       )}
