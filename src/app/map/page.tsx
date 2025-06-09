@@ -5,7 +5,8 @@ import styled from 'styled-components';
 import dynamic from 'next/dynamic';
 import type { Event } from '@/lib/types';
 import type { VenueOnMap } from '@/components/Map';
-import { findSceneByName } from '@/lib/scenes/venues'; // Correct import path
+// Correct import path for venues.ts, assuming it's in lib/scenes/venues.ts
+import { findSceneByName } from '@/lib/scenes/venues'; 
 
 const Wrapper = styled.div`
   min-height: 100vh;
@@ -46,35 +47,23 @@ export default function MapPage() {
   const [allEvents, setAllEvents] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // --- UPDATED useEffect for simple JSON fetch ---
   useEffect(() => {
-    const fetchStreamingEvents = async () => {
+    const fetchEvents = async () => {
       setIsLoading(true);
       try {
         const response = await fetch('/api/scrape');
-        if (!response.body) throw new Error("Response body is null");
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const chunk = decoder.decode(value);
-          const lines = chunk.split('\n\n').filter(line => line.startsWith('data: '));
-          for (const line of lines) {
-            const jsonString = line.replace('data: ', '');
-            try {
-              const newEvents: Event[] = JSON.parse(jsonString);
-              setAllEvents(prevEvents => [...prevEvents, ...newEvents]);
-            } catch (e) { console.error("Failed to parse JSON chunk:", jsonString, e); }
-          }
-        }
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        const events: Event[] = await response.json();
+        setAllEvents(events);
       } catch (error) {
-        console.error("Failed to fetch streaming events:", error);
+        console.error("Failed to fetch events:", error);
       } finally {
         setIsLoading(false);
       }
     };
-    fetchStreamingEvents();
-  }, []);
+    fetchEvents();
+  }, []); // Empty dependency array means this runs once on mount
 
   const venuesForMap = useMemo<VenueOnMap[]>(() => {
     const venuesMap: Map<string, VenueOnMap> = new Map();

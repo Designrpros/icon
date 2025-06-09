@@ -144,7 +144,6 @@ export function getAllCountries(): Country[] {
 }
 
 /**
-
  * Gets all scenes for a specific city.
  * @param cityName The name of the city to get scenes for.
  * @param countryName The name of the country (defaults to Norway).

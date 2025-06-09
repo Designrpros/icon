@@ -7,7 +7,7 @@ import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import EventCard from '@/components/EventCard';
 
-// --- STYLED COMPONENTS ---
+// --- STYLED COMPONENTS (No changes needed here) ---
 const Wrapper = styled.div`
   min-height: 100vh;
   padding-top: 8rem;
@@ -162,12 +162,7 @@ function parseCustomDate(dateString: string | null): Date | null {
 export default function CalendarPage() {
   const [allEvents, setAllEvents] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  
-  // ===============================================================
-  // === THIS IS THE ONLY LINE THAT CHANGES ===
-  // We now initialize the selected date to today, instead of null.
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
-  // ===============================================================
 
   const eventDates = useMemo(() => {
     const dates = new Set<string>();
@@ -180,39 +175,25 @@ export default function CalendarPage() {
     return dates;
   }, [allEvents]);
 
+  // --- UPDATED useEffect for simple JSON fetch ---
   useEffect(() => {
-    // ... streaming logic is unchanged ...
-    const fetchStreamingEvents = async () => {
+    const fetchEvents = async () => {
       setIsLoading(true);
       try {
         const response = await fetch('/api/scrape');
-        if (!response.body) throw new Error("Response body is null");
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const chunk = decoder.decode(value);
-          const lines = chunk.split('\n\n').filter(line => line.startsWith('data: '));
-          for (const line of lines) {
-            const jsonString = line.replace('data: ', '');
-            try {
-              const newEvents: Event[] = JSON.parse(jsonString);
-              setAllEvents(prevEvents => [...prevEvents, ...newEvents]);
-            } catch (e) { console.error("Failed to parse JSON chunk:", jsonString, e); }
-          }
-        }
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        const events: Event[] = await response.json();
+        setAllEvents(events);
       } catch (error) {
-        console.error("Failed to fetch streaming events:", error);
+        console.error("Failed to fetch events:", error);
       } finally {
         setIsLoading(false);
       }
     };
-    fetchStreamingEvents();
-  }, []);
+    fetchEvents();
+  }, []); // Empty dependency array means this runs once on mount
 
   const filteredEvents = useMemo(() => {
-    // This logic now defaults to filtering by today's date because of the initial state.
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -221,11 +202,9 @@ export default function CalendarPage() {
       .filter(event => {
         if (!event.parsedDate) return false;
         
-        // If selectedDate is null (user clicked "Show All"), show all future events.
-        if (!selectedDate) return event.parsedDate >= today;
+        if (!selectedDate) return event.parsedDate >= today; // Show all future events
 
-        // Otherwise, show events for the specific selected date.
-        return event.parsedDate.toDateString() === selectedDate.toDateString();
+        return event.parsedDate.toDateString() === selectedDate.toDateString(); // Show events for specific selected date
       })
       .sort((a, b) => {
         if (!a.parsedDate || !b.parsedDate) return 0;
@@ -260,7 +239,6 @@ export default function CalendarPage() {
         />
       </CalendarWrapper>
 
-      {/* This button is now visible on page load */}
       {selectedDate && (
         <FilterControls>
           <ClearButton onClick={() => setSelectedDate(null)}>Show All Upcoming Events</ClearButton>

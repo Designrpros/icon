@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+// Fix 1: Add useMemo to the React import
+import { useState, useEffect, useMemo } from 'react'; 
 import styled from 'styled-components';
 import type { Event } from '@/lib/types';
-import EventCard from '@/components/EventCard'; // Make sure to import your reusable card
+import EventCard from '@/components/EventCard';
 
-// --- STYLED COMPONENTS ---
+// --- STYLED COMPONENTS (No changes needed here) ---
 const Wrapper = styled.div`
   min-height: 100vh;
   background-color: #1A1A3D;
@@ -91,7 +92,7 @@ const LoadingText = styled.p`
   margin-top: 2rem;
 `;
 
-// --- DATE PARSING HELPER ---
+// --- DATE PARSING HELPER (unchanged) ---
 const norwegianMonths: { [key: string]: number } = {
   'jan': 0, 'feb': 1, 'mar': 2, 'apr': 3, 'mai': 4, 'jun': 5,
   'jul': 6, 'aug': 7, 'sep': 8, 'okt': 9, 'nov': 10, 'des': 11,
@@ -117,69 +118,52 @@ function parseCustomDate(dateString: string | null): Date | null {
 // --- EVENTS PAGE COMPONENT ---
 export default function EventsPage() {
   const [allEvents, setAllEvents] = useState<Event[]>([]);
-  const [loadingStatus, setLoadingStatus] = useState('Initializing scrapers...');
-  const [isDone, setIsDone] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); 
   const [searchTerm, setSearchTerm] = useState('');
   const [activeSource, setActiveSource] = useState('All');
 
   useEffect(() => {
-    const fetchStreamingEvents = async () => {
+    const fetchEvents = async () => {
+      setIsLoading(true);
       try {
         const response = await fetch('/api/scrape');
-        if (!response.body) throw new Error("Response body is null");
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        setLoadingStatus("Scraping in progress... events will appear as they are found.");
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) {
-            setLoadingStatus("All events loaded!");
-            setIsDone(true);
-            break;
-          }
-          const chunk = decoder.decode(value);
-          const lines = chunk.split('\n\n').filter(line => line.startsWith('data: '));
-          for (const line of lines) {
-            const jsonString = line.replace('data: ', '');
-            try {
-              const newEvents: Event[] = JSON.parse(jsonString);
-              setAllEvents(prevEvents => [...prevEvents, ...newEvents]);
-            } catch (e) {
-              console.error("Failed to parse JSON chunk:", jsonString, e);
-            }
-          }
-        }
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        const events: Event[] = await response.json();
+        setAllEvents(events);
       } catch (error) {
-        console.error("Failed to fetch streaming events:", error);
-        setLoadingStatus("An error occurred while scraping.");
-        setIsDone(true);
+        console.error("Failed to fetch events:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
-    fetchStreamingEvents();
+    fetchEvents();
   }, []);
 
   const sources = ['All', ...Array.from(new Set(allEvents.map(event => event.source)))];
   const lowerCaseSearchTerm = searchTerm.toLowerCase();
   
-  const processedEvents = allEvents
-    .filter(event => { // This is the full filter implementation
-      const matchesSource = activeSource === 'All' || event.source === activeSource;
-      if (!matchesSource) return false;
-      if (!lowerCaseSearchTerm) return true;
-      const searchableContent = [ event.title, event.venue, event.date, event.description, event.ticketStatus, event.source, event.city, ]
-        .filter(Boolean).join(' ').toLowerCase();
-      return searchableContent.includes(lowerCaseSearchTerm);
-    })
-    .sort((a, b) => { // This is the full sort implementation
-      const dateA = parseCustomDate(a.date);
-      const dateB = parseCustomDate(b.date);
-      if (!dateA) return 1;
-      if (!dateB) return -1;
-      return dateA.getTime() - dateB.getTime();
-    });
+  const processedEvents = useMemo(() => {
+    return allEvents
+      .filter(event => { 
+        const matchesSource = activeSource === 'All' || event.source === activeSource;
+        if (!matchesSource) return false;
+        if (!lowerCaseSearchTerm) return true;
+        const searchableContent = [ event.title, event.venue, event.date, event.description, event.ticketStatus, event.source, event.city, ]
+          .filter(Boolean).join(' ').toLowerCase();
+        return searchableContent.includes(lowerCaseSearchTerm);
+      })
+      // Fix 2: Add explicit type to 'event' parameter
+      .sort((a, b) => { 
+        const dateA = parseCustomDate(a.date);
+        const dateB = parseCustomDate(b.date);
+        if (!dateA) return 1;
+        if (!dateB) return -1;
+        return dateA.getTime() - dateB.getTime();
+      });
+  }, [allEvents, activeSource, lowerCaseSearchTerm]);
 
-  const showLoadingMessage = !isDone;
-  const showNoResultsMessage = isDone && processedEvents.length === 0 && searchTerm !== '';
+  const showLoadingMessage = isLoading && allEvents.length === 0;
+  const showNoResultsMessage = !isLoading && processedEvents.length === 0 && searchTerm !== '';
 
   return (
     <Wrapper>
@@ -207,12 +191,13 @@ export default function EventsPage() {
       </EventsHeader>
 
       <EventsGrid>
-        {processedEvents.map(event => (
+        {/* Fix 2: Add explicit type to 'event' parameter here too */}
+        {processedEvents.map((event: Event) => (
           <EventCard key={event.id} event={event} />
         ))}
       </EventsGrid>
 
-      {showLoadingMessage && <LoadingText>{loadingStatus}</LoadingText>}
+      {showLoadingMessage && <LoadingText>Loading event data...</LoadingText>}
       {showNoResultsMessage && <LoadingText>No events found for &quot;{searchTerm}&quot;.</LoadingText>}
     </Wrapper>
   );
