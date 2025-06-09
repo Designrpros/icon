@@ -1,10 +1,11 @@
-// app/api/scrape/route.ts for Vercel deployment (Frontend)
-// Assuming types.ts is still in your frontend lib/types.ts
+// app/api/scrape/route.ts (for your Vercel frontend deployment)
+'use server'; // Keep this line if it's already there (it was removed in an earlier step as per fix)
+              // If you removed it previously, keep it removed. The build logs will tell us if it causes issues.
+
 import type { Event } from '@/lib/types'; 
 
 // IMPORTANT: This URL MUST point to your self-hosted backend API.
-// It will use the BACKEND_API_URL environment variable you set in Vercel and .env.local.
-// If the env var isn't set, it falls back to your specific public IP and port.
+// It uses the BACKEND_API_URL environment variable from Vercel's settings.
 const BACKEND_API_URL = process.env.BACKEND_API_URL || 'http://51.175.105.40:3001'; 
 
 export async function GET() {
@@ -12,36 +13,64 @@ export async function GET() {
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        console.log(`[${new Date().toISOString()}] Frontend: Fetching events from backend API: ${BACKEND_API_URL}/api/events`);
+        console.log(`[${new Date().toISOString()}] Frontend-Route: Attempting to fetch from backend API: ${BACKEND_API_URL}/api/events`);
+        
         const response = await fetch(`${BACKEND_API_URL}/api/events`, {
-          // Add headers if your backend API requires authentication (highly recommended for security!)
-          // headers: { 'Authorization': `Bearer ${process.env.BACKEND_API_KEY}` } // Example
-          next: { revalidate: 3600 } // Next.js cache revalidation every hour (optional, but good for performance)
+          // Add headers if your backend API requires authentication
+          // headers: { 'Authorization': `Bearer ${process.env.BACKEND_API_KEY}` },
+          next: { revalidate: 3600 } // Next.js cache revalidation every hour (optional, but good)
         });
 
         if (!response.ok) {
-          throw new Error(`Backend API responded with status ${response.status}: ${response.statusText}`);
+          // Log more details if the response status is not OK
+          const errorBody = await response.text(); // Try to read the error body
+          console.error(`[${new Date().toISOString()}] Frontend-Route: Backend API responded with non-OK status: ${response.status} ${response.statusText}`);
+          console.error(`[${new Date().toISOString()}] Frontend-Route: Backend API error body received: ${errorBody.substring(0, 500)}... (truncated)`);
+          throw new Error(`HTTP error! status: ${response.status} ${response.statusText}`);
         }
 
-        const events: Event[] = await response.json();
-        console.log(`[${new Date().toISOString()}] Frontend: Received ${events.length} events from backend.`);
+        // --- BEGIN: Added Robustness for JSON Parsing ---
+        const responseText = await response.text(); // Read the response as text first
+        
+        if (!responseText || responseText.trim() === '') {
+            console.warn(`[${new Date().toISOString()}] Frontend-Route: Backend API returned an empty or whitespace-only response.`);
+            controller.enqueue(encoder.encode(`data: []\n\n`)); // Send empty array if response is truly empty
+            return;
+        }
+
+        let events: Event[] = [];
+        try {
+            events = JSON.parse(responseText); // Manually parse the text
+        } catch (jsonError: any) {
+            console.error(`[${new Date().toISOString()}] Frontend-Route: Failed to parse JSON from backend API:`, jsonError.message);
+            console.error(`[${new Date().toISOString()}] Frontend-Route: Malformed JSON received (first 500 chars):`, responseText.substring(0, 500));
+            // Log the full responseText if it's not too large for debugging
+            if (responseText.length < 5000) { // Limit logging very large responses
+                console.error(`[${new Date().toISOString()}] Frontend-Route: Full malformed JSON:`, responseText);
+            }
+            controller.enqueue(encoder.encode(`data: []\n\n`)); // Send empty array on parse error
+            return;
+        }
+        // --- END: Added Robustness for JSON Parsing ---
+
+        console.log(`[${new Date().toISOString()}] Frontend-Route: Successfully received and parsed ${events.length} events from backend.`);
         const chunk = JSON.stringify(events);
         controller.enqueue(encoder.encode(`data: ${chunk}\n\n`));
 
-      } catch (error) {
-        console.error(`[${new Date().toISOString()}] Frontend: Error fetching events from backend API:`, error);
-        // In case of error, send an empty array or an error message to the client
+      } catch (error: any) {
+        // Catch any errors during fetch or initial checks
+        console.error(`[${new Date().toISOString()}] Frontend-Route: Catch-all error during fetch or processing:`, error.message);
         controller.enqueue(encoder.encode(`data: []\n\n`));
       } finally {
-        controller.close(); // Always close the stream
+        controller.close(); // Ensure the stream is always closed
       }
     },
   });
 
   return new Response(stream, {
     headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache', // Important for Server-Sent Events (SSE)
+      'Content-Type': 'text/event-stream', // Important for Server-Sent Events
+      'Cache-Control': 'no-cache', // Prevent caching of SSE streams
       'Connection': 'keep-alive',
     },
   });
@@ -49,7 +78,3 @@ export async function GET() {
 
 // 'force-dynamic' ensures this route is always run on demand and fetches fresh data
 export const dynamic = 'force-dynamic';
-
-// The maxDuration is no longer needed here as the heavy work is offloaded to your Ubuntu server.
-// Vercel function will just make a quick HTTP request.
-// export const maxDuration = 60; // You can remove this line
