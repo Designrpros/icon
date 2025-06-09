@@ -1,6 +1,4 @@
 // app/api/scrape/route.ts for Vercel deployment (Frontend)
-'use server'; // Ensures this runs on the server
-
 // Assuming types.ts is still in your frontend lib/types.ts
 import type { Event } from '@/lib/types'; 
 
