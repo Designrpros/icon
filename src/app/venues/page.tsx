@@ -1,5 +1,3 @@
-// src/app/venues/page.tsx
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -87,24 +85,18 @@ export default function VenuesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-// src/app/venues/page.tsx
-
   useEffect(() => {
     const fetchVenues = async () => {
       setIsLoading(true);
-      const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
-      if (!API_BASE_URL) {
-        setError("Configuration Error: Backend API URL is not set.");
-        setIsLoading(false);
-        return;
-      }
+      setError(null);
       try {
-        const response = await fetch(`${API_BASE_URL}/api/venues`);
+        // Fetch directly from the relative path. Next.js will proxy this request.
+        const response = await fetch('/api/venues');
         if (!response.ok) throw new Error(`Failed to fetch venues: ${response.statusText}`);
+        
         const data: Country[] = await response.json();
         setCountries(data);
-      } catch (err: unknown) { // Changed 'any' to 'unknown'
-        // Type-check the error before using it
+      } catch (err: unknown) {
         if (err instanceof Error) {
           setError(err.message);
         } else {

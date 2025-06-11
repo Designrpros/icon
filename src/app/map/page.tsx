@@ -62,20 +62,14 @@ export default function MapPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
-    if (!API_BASE_URL) {
-      setError("Configuration Error: NEXT_PUBLIC_BACKEND_API_URL is not set.");
-      setIsLoading(false);
-      return;
-    }
-
     const fetchAllData = async () => {
       setIsLoading(true);
       setError(null);
       try {
+        // Fetch directly from relative paths. Next.js handles the rewrite.
         const [eventsResponse, venuesResponse] = await Promise.all([
-          fetch(`${API_BASE_URL}/api/events`),
-          fetch(`${API_BASE_URL}/api/venues`)
+          fetch('/api/events'),
+          fetch('/api/venues')
         ]);
 
         if (!eventsResponse.ok) throw new Error(`Failed to fetch events: ${eventsResponse.statusText}`);
@@ -86,9 +80,8 @@ export default function MapPage() {
 
         setAllEvents(events);
         setCountries(venueData);
-      } catch (err: unknown) { // Changed 'any' to 'unknown'
+      } catch (err: unknown) {
         console.error("Failed to fetch data:", err);
-        // Type-check the error before using it
         if (err instanceof Error) {
           setError(err.message);
         } else {
