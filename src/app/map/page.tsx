@@ -86,9 +86,14 @@ export default function MapPage() {
 
         setAllEvents(events);
         setCountries(venueData);
-      } catch (err: any) {
+      } catch (err: unknown) { // Changed 'any' to 'unknown'
         console.error("Failed to fetch data:", err);
-        setError(err.message);
+        // Type-check the error before using it
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError('An unexpected error occurred.');
+        }
       } finally {
         setIsLoading(false);
       }

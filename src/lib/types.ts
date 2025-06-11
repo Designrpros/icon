@@ -45,7 +45,8 @@ declare global {
     INITIAL_DATA?: {
       model?: {
         eventResponse?: {
-          events: Array<any>; // This is the array of raw event objects from VisitOslo's data
+          // Changed `any` to `unknown` for type safety with external data.
+          events: Array<unknown>;
           totalResults?: number;
           offset?: number;
           count?: number;

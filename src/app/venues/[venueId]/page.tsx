@@ -102,7 +102,14 @@ export default function VenueDetailPage() {
         
         setAllEvents(await eventsRes.json());
         setCountries(await venuesRes.json());
-      } catch (err: any) { setError(err.message); } 
+      } catch (err: unknown) { // Changed 'any' to 'unknown'
+        // Type-check the error before using it
+        if (err instanceof Error) {
+            setError(err.message);
+        } else {
+            setError('An unexpected error occurred.');
+        }
+      } 
       finally { setIsLoading(false); }
     };
     fetchAllData();

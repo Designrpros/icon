@@ -5,7 +5,7 @@
 import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import Link from 'next/link';
-import type { Country, Scene } from '@/lib/types';
+import type { Country } from '@/lib/types';
 import { slugify } from '@/lib/utils';
 
 // --- STYLED COMPONENTS ---
@@ -87,6 +87,8 @@ export default function VenuesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+// src/app/venues/page.tsx
+
   useEffect(() => {
     const fetchVenues = async () => {
       setIsLoading(true);
@@ -101,8 +103,13 @@ export default function VenuesPage() {
         if (!response.ok) throw new Error(`Failed to fetch venues: ${response.statusText}`);
         const data: Country[] = await response.json();
         setCountries(data);
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err: unknown) { // Changed 'any' to 'unknown'
+        // Type-check the error before using it
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError('An unexpected error occurred.');
+        }
       } finally {
         setIsLoading(false);
       }
