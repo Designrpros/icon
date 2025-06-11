@@ -114,7 +114,7 @@ export default function VenueDetailPage() {
     };
     fetchAllData();
   }, []);
-
+  
   const activeVenue = useMemo<Scene | null>(() => {
     if (!venueId || countries.length === 0) return null;
     for (const country of countries) {
