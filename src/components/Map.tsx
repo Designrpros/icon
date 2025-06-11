@@ -1,10 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-// Renaming the default import to ReactMapGL to avoid conflicts
 import ReactMapGL, { Marker, Popup, NavigationControl } from 'react-map-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import type { MapboxEvent } from 'mapbox-gl'; 
+import type { MapboxEvent } from 'mapbox-gl';
 import type { Event } from '@/lib/types';
 import styled from 'styled-components';
 
@@ -14,8 +13,15 @@ export interface VenueOnMap {
   events: Event[];
 }
 
+// --- 1. UPDATE THE PROPS INTERFACE ---
+// Add `initialViewState` here so the component knows to expect it.
 interface MapProps {
   venues: VenueOnMap[];
+  initialViewState: {
+    longitude: number;
+    latitude: number;
+    zoom: number;
+  };
 }
 
 const MarkerPin = styled.div`
@@ -34,30 +40,28 @@ const PopupCard = styled.div`
   li a { color: #1A1A3D; text-decoration: none; font-weight: 600; font-size: 0.85rem; &:hover { text-decoration: underline; } }
 `;
 
-export function EventMap({ venues }: MapProps) {
+// --- 2. UPDATE THE COMPONENT SIGNATURE ---
+// Add `initialViewState` to the list of props being received.
+export function EventMap({ venues, initialViewState }: MapProps) {
   const [popupInfo, setPopupInfo] = useState<VenueOnMap | null>(null);
 
   return (
     <ReactMapGL
-      // --- THIS IS THE KEY FIX ---
-      // This prop helps manage the map's WebGL context across React re-renders,
-      // preventing initialization errors that can cause a blank map.
       reuseMaps
       
-      initialViewState={{
-        longitude: 10.7522,
-        latitude: 59.915,
-        zoom: 13,
-      }}
+      // --- 3. USE THE PROP ---
+      // This now uses the prop passed down from MapPage, instead of being hardcoded to Oslo.
+      initialViewState={initialViewState}
+      
       style={{ width: '100%', height: '70vh', borderRadius: '0.5rem' }}
       mapStyle="mapbox://styles/mapbox/dark-v11"
       mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
     >
       <NavigationControl position="top-right" />
 
-      {venues.map((venue, index) => (
+      {venues.map((venue) => (
         <Marker
-          key={`marker-${index}`}
+          key={venue.name}
           longitude={venue.coords[0]}
           latitude={venue.coords[1]}
           anchor="bottom"

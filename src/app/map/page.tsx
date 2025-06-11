@@ -3,11 +3,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import styled from 'styled-components';
 import dynamic from 'next/dynamic';
-import type { Event } from '@/lib/types';
+import type { Event, Country, Scene } from '@/lib/types';
 import type { VenueOnMap } from '@/components/Map';
-// Correct import path for venues.ts, assuming it's in lib/scenes/venues.ts
-import { findSceneByName } from '@/lib/scenes/venues'; 
 
+// --- STYLED COMPONENTS ---
 const Wrapper = styled.div`
   min-height: 100vh;
   padding-top: 8rem;
@@ -38,38 +37,82 @@ const LoadingText = styled.p`
   color: #A9A7C7;
 `;
 
+const ErrorText = styled(LoadingText)`
+    color: #FF8C42;
+    font-weight: 700;
+`;
+
+// --- DYNAMIC MAP IMPORT ---
 const EventMap = dynamic(() => import('@/components/Map').then((mod) => mod.EventMap), {
   loading: () => <LoadingText>Loading map...</LoadingText>,
   ssr: false
 });
 
+// Default map view centered on Norway
+const NORWAY_INITIAL_VIEW_STATE = {
+  longitude: 15.4,
+  latitude: 65.5,
+  zoom: 3.8
+};
+
 export default function MapPage() {
   const [allEvents, setAllEvents] = useState<Event[]>([]);
+  const [countries, setCountries] = useState<Country[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // --- UPDATED useEffect for simple JSON fetch ---
   useEffect(() => {
-    const fetchEvents = async () => {
+    const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
+    if (!API_BASE_URL) {
+      setError("Configuration Error: NEXT_PUBLIC_BACKEND_API_URL is not set.");
+      setIsLoading(false);
+      return;
+    }
+
+    const fetchAllData = async () => {
       setIsLoading(true);
+      setError(null);
       try {
-        const response = await fetch('/api/scrape');
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        const events: Event[] = await response.json();
+        const [eventsResponse, venuesResponse] = await Promise.all([
+          fetch(`${API_BASE_URL}/api/events`),
+          fetch(`${API_BASE_URL}/api/venues`)
+        ]);
+
+        if (!eventsResponse.ok) throw new Error(`Failed to fetch events: ${eventsResponse.statusText}`);
+        if (!venuesResponse.ok) throw new Error(`Failed to fetch venues: ${venuesResponse.statusText}`);
+
+        const events: Event[] = await eventsResponse.json();
+        const venueData: Country[] = await venuesResponse.json();
+
         setAllEvents(events);
-      } catch (error) {
-        console.error("Failed to fetch events:", error);
+        setCountries(venueData);
+      } catch (err: any) {
+        console.error("Failed to fetch data:", err);
+        setError(err.message);
       } finally {
         setIsLoading(false);
       }
     };
-    fetchEvents();
-  }, []); // Empty dependency array means this runs once on mount
+
+    fetchAllData();
+  }, []);
+
+  const sceneLookup = useMemo(() => {
+    const lookup = new Map<string, Scene>();
+    countries.forEach(country => country.cities.forEach(city => city.scenes.forEach(scene => {
+      lookup.set(scene.name.toLowerCase(), scene);
+      scene.aliases?.forEach(alias => lookup.set(alias.toLowerCase(), scene));
+    })));
+    return lookup;
+  }, [countries]);
 
   const venuesForMap = useMemo<VenueOnMap[]>(() => {
-    const venuesMap: Map<string, VenueOnMap> = new Map();
+    const venuesMap = new Map<string, VenueOnMap>();
     allEvents.forEach(event => {
-      const scene = findSceneByName(event.venue);
-      if (scene) {
+      const venueNameKey = event.venue.toLowerCase();
+      const scene = sceneLookup.get(venueNameKey);
+      
+      if (scene && scene.coords[0] !== 0 && scene.coords[1] !== 0) {
         if (!venuesMap.has(scene.name)) {
           venuesMap.set(scene.name, { name: scene.name, coords: scene.coords, events: [] });
         }
@@ -77,7 +120,7 @@ export default function MapPage() {
       }
     });
     return Array.from(venuesMap.values());
-  }, [allEvents]);
+  }, [allEvents, sceneLookup]);
 
   return (
     <Wrapper>
@@ -86,10 +129,14 @@ export default function MapPage() {
         <p>Click on a marker to see upcoming events at that venue.</p>
       </Header>
       <main style={{ padding: '0 2rem' }}>
-        {isLoading && venuesForMap.length === 0 
-          ? <LoadingText>Loading event data...</LoadingText>
-          : <EventMap venues={venuesForMap} />
-        }
+        {isLoading && <LoadingText>Loading event data...</LoadingText>}
+        {error && <ErrorText>{error}</ErrorText>}
+        {!isLoading && !error && (
+            <EventMap 
+                venues={venuesForMap} 
+                initialViewState={NORWAY_INITIAL_VIEW_STATE}
+            />
+        )}
       </main>
     </Wrapper>
   );
