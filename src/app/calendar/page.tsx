@@ -1,5 +1,3 @@
-// src/app/calendar/page.tsx
-
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -148,6 +146,17 @@ function parseCustomDate(dateString: string | null): Date | null {
     if (!dateString) return null;
     const cleanDateString = dateString.toLowerCase().trim();
 
+    // --- FIX: Add handler for YYYY-MM-DD format ---
+    const yyyyMmDdParts = cleanDateString.split('-');
+    if (yyyyMmDdParts.length === 3 && yyyyMmDdParts[0].length === 4) {
+        const year = parseInt(yyyyMmDdParts[0], 10);
+        const monthIndex = parseInt(yyyyMmDdParts[1], 10) - 1;
+        const day = parseInt(yyyyMmDdParts[2], 10);
+        if (!isNaN(day) && !isNaN(monthIndex) && !isNaN(year)) {
+            return new Date(year, monthIndex, day);
+        }
+    }
+
     const ymdParts = cleanDateString.split('.');
     if (ymdParts.length === 3 && ymdParts[0].length === 2 && ymdParts[1].length === 2 && ymdParts[2].length === 4) {
         const day = parseInt(ymdParts[0], 10);
@@ -196,10 +205,11 @@ export default function CalendarPage() {
   }, [allEvents]);
 
   useEffect(() => {
+    // --- FIX: Fetch from the correct /api/events endpoint ---
     const fetchEvents = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch('/api/scrape');
+        const response = await fetch('/api/events');
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const events: Event[] = await response.json();
         setAllEvents(events);
@@ -226,7 +236,6 @@ export default function CalendarPage() {
       });
   }, [allEvents, selectedDate]);
   
-  // --- FIX IS HERE: Changed 'any' to 'Date' ---
   const handleDateChange = (date: Date) => {
     if (selectedDate && date.toDateString() === selectedDate.toDateString()) {
       setSelectedDate(null);

@@ -7,12 +7,16 @@ export interface Event {
   title: string;
   venue: string;
   date: string | null;
-  imageUrl?: string;
-  description?: string;
-  ticketStatus?: 'Available' | 'Sold Out' | 'Few Tickets' | 'Free' | 'Cancelled' | 'Info';
+  
+  // --- IMPORTANT CHANGE HERE ---
+  image_url?: string; // Changed from 'imageUrl' to 'image_url' to match backend JSON
+  
+  description?: string | null; // Changed to allow null based on backend curl output
+  ticket_status?: 'Available' | 'Sold Out' | 'Few Tickets' | 'Free' | 'Cancelled' | 'Info' | string; // Using snake_case for consistency with backend, and 'string' for flexibility
   source: string;
   city: string;
   country: string;
+  scraped_at?: string; // Added based on backend curl output (if you use it in frontend)
 }
 
 // --- NEW: Venue & Location Data Structures ---
@@ -39,18 +43,15 @@ export interface Country {
 
 
 // --- Global Type Declarations (e.g., for VisitOslo scraper) ---
-// This tells TypeScript that `window` might have an `INITIAL_DATA` property
 declare global {
   interface Window {
     INITIAL_DATA?: {
       model?: {
         eventResponse?: {
-          // Changed `any` to `unknown` for type safety with external data.
-          events: Array<unknown>;
+          events: Array<unknown>; // Using 'unknown' for safety; refine as needed based on exact data structure
           totalResults?: number;
           offset?: number;
           count?: number;
-          // Add other properties if needed for pagination logic later
         };
       };
     };

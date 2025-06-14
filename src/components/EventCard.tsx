@@ -2,11 +2,12 @@
 
 'use client';
 
-import type { Event } from '@/lib/types';
+import type { Event } from '@/lib/types'; // This import should now correctly use 'image_url' from lib/types.ts
 import styled from 'styled-components';
 import { FaMapMarkerAlt, FaCalendarAlt, FaTicketAlt } from 'react-icons/fa';
 
 // This interface expects to receive the pre-parsed Date object from the parent page.
+// The Event type itself (from '@/lib/types') now has 'image_url'
 interface EventWithParsedDate extends Event {
   parsedDate: Date | null;
 }
@@ -28,13 +29,14 @@ const Card = styled.a`
   }
 `;
 
-// --- MODIFIED ImageWrapper ---
-// Now uses a background-image with a placeholder fallback
-const ImageWrapper = styled.div<{ $imageUrl?: string }>`
+// --- MODIFIED ImageWrapper Props and Usage ---
+// Now expects '$image_url' (snake_case)
+const ImageWrapper = styled.div<{ $image_url?: string }>`
   width: 100%;
   height: 180px;
   background-color: #1A1A3D;
-  background-image: url(${props => props.$imageUrl || 'https://placehold.co/600x400/2C2A4A/FF8C42?text=ICON'});
+  // Use $image_url from props, fallback to placeholder
+  background-image: url(${props => props.$image_url || 'https://placehold.co/600x400/2C2A4A/FF8C42?text=ICON'});
   background-size: cover;
   background-position: center;
 `;
@@ -66,7 +68,7 @@ const InfoRow = styled.div`
   }
 `;
 
-const StatusBadge = styled.div<{ $status?: Event['ticketStatus'] }>`
+const StatusBadge = styled.div<{ $status?: Event['ticket_status'] }>`
   margin-top: auto;
   padding: 0.5rem 1rem;
   border-radius: 9999px;
@@ -91,7 +93,6 @@ const StatusBadge = styled.div<{ $status?: Event['ticketStatus'] }>`
 // Helper to format the parsed date into a readable string
 const formatDate = (date: Date | null): string => {
   if (!date) return 'Dato ikke fastsatt';
-  // Using a shorter, cleaner format
   return date.toLocaleDateString('nb-NO', {
     weekday: 'short',
     day: 'numeric',
@@ -105,8 +106,12 @@ export default function EventCard({ event }: { event: EventWithParsedDate }) {
 
   return (
     <Card href={event.url} target="_blank" rel="noopener noreferrer">
-      {/* The ImageWrapper now handles the placeholder automatically */}
-      <ImageWrapper $imageUrl={event.imageUrl} role="img" aria-label={event.title} />
+      {/* --- CRITICAL CHANGE HERE: Use event.image_url and pass it as $image_url --- */}
+      <ImageWrapper 
+        $image_url={event.image_url} // Changed to image_url (snake_case)
+        role="img" 
+        aria-label={event.title || 'Event Image'} 
+      />
       
       <Content>
         <Title>{event.title}</Title>
@@ -118,9 +123,9 @@ export default function EventCard({ event }: { event: EventWithParsedDate }) {
           <FaMapMarkerAlt />
           <span>{event.venue}, {event.city}</span>
         </InfoRow>
-        <StatusBadge $status={event.ticketStatus}>
+        <StatusBadge $status={event.ticket_status}> {/* Changed to ticket_status here for consistency */}
           <FaTicketAlt style={{ marginRight: '0.5rem' }}/>
-          {event.ticketStatus || 'Info'}
+          {event.ticket_status || 'Info'} {/* Changed to ticket_status here */}
         </StatusBadge>
       </Content>
     </Card>

@@ -1,11 +1,9 @@
-// src/app/events/page.tsx
-
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
 import styled from 'styled-components';
-import type { Event } from '@/lib/types';
-import EventCard from '@/components/EventCard';
+import type { Event } from '@/lib/types'; // This import will now correctly use 'image_url'
+import EventCard from '@/components/EventCard'; // This component needs to use 'event.image_url'
 
 // --- STYLED COMPONENTS (No changes) ---
 const Wrapper = styled.div`
@@ -103,6 +101,17 @@ function parseCustomDate(dateString: string | null): Date | null {
     if (!dateString) return null;
     const cleanDateString = dateString.toLowerCase().trim();
 
+    // --- FIX: Add handler for YYYY-MM-DD format ---
+    const yyyyMmDdParts = cleanDateString.split('-');
+    if (yyyyMmDdParts.length === 3 && yyyyMmDdParts[0].length === 4) {
+        const year = parseInt(yyyyMmDdParts[0], 10);
+        const monthIndex = parseInt(yyyyMmDdParts[1], 10) - 1;
+        const day = parseInt(yyyyMmDdParts[2], 10);
+        if (!isNaN(day) && !isNaN(monthIndex) && !isNaN(year)) {
+            return new Date(year, monthIndex, day);
+        }
+    }
+
     const ymdParts = cleanDateString.split('.');
     if (ymdParts.length === 3 && ymdParts[0].length === 2 && ymdParts[1].length === 2 && ymdParts[2].length === 4) {
         const day = parseInt(ymdParts[0], 10);
@@ -142,9 +151,10 @@ export default function EventsPage() {
     const fetchEvents = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch('/api/scrape');
+        // Ensure this URL is accessible from your Vercel deployment if deployed
+        const response = await fetch('/api/events'); 
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        const events: Event[] = await response.json();
+        const events: Event[] = await response.json(); // This will parse JSON into Event[]
         setAllEvents(events);
       } catch (error) {
         console.error("Failed to fetch events:", error);
@@ -160,14 +170,12 @@ export default function EventsPage() {
   const processedEvents = useMemo(() => {
     const lowerCaseSearchTerm = searchTerm.toLowerCase();
 
-    // The .map() function here adds the `parsedDate` property to each event
     return allEvents
       .map(event => ({
         ...event,
         parsedDate: parseCustomDate(event.date),
       }))
       .filter(event => {
-        // Now we can filter based on the new properties
         if (!event.parsedDate) return false;
 
         const matchesSource = activeSource === 'All' || event.source === activeSource;
@@ -176,7 +184,8 @@ export default function EventsPage() {
         if (lowerCaseSearchTerm) {
           const searchableContent = [
             event.title, event.venue, event.date, event.description,
-            event.ticketStatus, event.source, event.city
+            event.ticket_status, // Use image_url from the backend
+            event.source, event.city
           ].filter(Boolean).join(' ').toLowerCase();
           return searchableContent.includes(lowerCaseSearchTerm);
         }
@@ -184,7 +193,6 @@ export default function EventsPage() {
         return true;
       })
       .sort((a, b) => {
-        // We can now safely sort by the `parsedDate` property
         if (!a.parsedDate || !b.parsedDate) return 0;
         return a.parsedDate.getTime() - b.parsedDate.getTime();
       });
@@ -220,7 +228,8 @@ export default function EventsPage() {
 
       <EventsGrid>
         {processedEvents.map((event) => (
-          // The 'event' object passed here now has the required 'parsedDate'
+          // The 'event' object passed here will now have 'image_url' populated
+          // if your EventCard component uses it correctly.
           <EventCard key={event.id} event={event} />
         ))}
       </EventsGrid>
